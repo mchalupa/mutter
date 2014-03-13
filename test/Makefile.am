@@ -1,7 +1,22 @@
 
 SUBDIRS = testplugin
 
-BUILT_SOURCES =							\
+TESTS =					\
+	sanity-test
+
+check_PROGRAMS = $(TESTS)
+
+test_runner_src = 			\
+	mutter-test-runner.c		\
+	mutter-test-runner.h
+
+sanity_test_SOURCES = sanity-test.c $(test_runner_src)
+
+
+AM_CFLAGS = $(MUTTER_CFLAGS)
+AM_LDFLAGS = $(MUTTER_LIBS)
+
+BUILT_SOURCES =				\
 	wayland-test-protocol.c		\
 	wayland-test-server-protocol.h	\
 	wayland-test-client-protocol.h	\

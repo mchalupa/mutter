@@ -382,6 +382,7 @@ src/compositor/plugins/Makefile
 src/meta/meta-version.h
 po/Makefile.in
 test/Makefile
+test/testplugin/Makefile
 ])
 
 AC_OUTPUT

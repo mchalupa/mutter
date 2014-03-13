@@ -28,6 +28,9 @@
 #include <meta/meta-plugin.h>
 #include <clutter/clutter.h>
 
+#include <wayland-server.h>
+
+#include "wayland-test-server-protocol.h"
 #include "meta-wayland-private.h"
 #include "meta-background-actor.h"
 #include "meta-background-group.h"
@@ -126,6 +129,10 @@ meta_wayland_test_plugin_class_init (MetaWaylandTestPluginClass *klass)
 }
 
 static void
+bind_test_object (struct wl_client *client,
+                  void *data, uint32_t version, uint32_t id);
+
+static void
 meta_wayland_test_plugin_init (MetaWaylandTestPlugin *self)
 {
   MetaWaylandTestPluginPrivate *priv;
@@ -140,6 +147,10 @@ meta_wayland_test_plugin_init (MetaWaylandTestPlugin *self)
   priv->info.description = "This plugin inserts wl_test object into mutter";
 
   priv->compositor = meta_wayland_compositor_get_default ();
+
+  if (wl_global_create (priv->compositor->wayland_display,
+                        &wl_test_interface, 1, self, bind_test_object) == NULL)
+    g_error ("Global (wl_test) initialization failed");
 }
 
 static void
@@ -202,4 +213,32 @@ start (MetaPlugin *plugin)
   on_monitors_changed (screen, plugin);
 
   clutter_actor_show (meta_get_stage_for_screen (screen));
+}
+
+static void
+destroy_test_object_resource (struct wl_resource *resource)
+{
+  MetaWaylandTestPlugin *plugin = wl_resource_get_user_data (resource);
+
+  plugin->priv->test_object_resource = NULL;
+}
+
+static void
+bind_test_object (struct wl_client *client,
+                  void *data, uint32_t version, uint32_t id)
+{
+  MetaWaylandTestPlugin *plugin = data;
+  struct wl_resource *res;
+
+  res = wl_resource_create (client, &wl_test_interface, 1, id);
+  if (!res)
+    {
+      wl_client_post_no_memory (client);
+      return;
+    }
+
+  wl_resource_set_implementation (res, NULL /* impl */, plugin,
+                                  destroy_test_object_resource);
+
+  plugin->priv->test_object_resource = res;
 }

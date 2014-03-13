@@ -10,11 +10,13 @@ mutter_wayland_test_la_CFLAGS   =	\
 	-I$(top_srcdir)/src/backends	\
 	-I$(top_srcdir)/src/compositor	\
 	-I$(top_srcdir)/src/meta	\
-	-I$(top_srcdir)/src/ui
+	-I$(top_srcdir)/src/ui		\
+	-I$(top_srcdir)/test
 mutter_wayland_test_la_SOURCES  = 	\
-	wayland-test.c
+	wayland-test.c			\
+	../wayland-test-protocol.c
 mutter_wayland_test_la_LDFLAGS  =	\
-	-module	-avoid-version -no-undefined
+	-module	-avoid-version -no-undefined -lwayland-server
 mutter_wayland_test_la_LIBADD   = @CLUTTER_LIBS@
 
 

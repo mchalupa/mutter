@@ -26,7 +26,6 @@
 #include "config.h"
 
 #include <assert.h>
-#include "weston-test-runner.h"
 #include "wayland-test-client-protocol.h"
 
 struct client {
@@ -34,6 +33,7 @@ struct client {
 	struct wl_registry *wl_registry;
 	struct wl_compositor *wl_compositor;
 	struct wl_shm *wl_shm;
+	struct xdg_shell *xdg_shell;
 	struct test *test;
 	struct input *input;
 	struct output *output;
@@ -92,6 +92,7 @@ struct output {
 
 struct surface {
 	struct wl_surface *wl_surface;
+	struct xdg_surface *xdg_surface;
 	struct wl_buffer *wl_buffer;
 	struct output *output;
 	int x;

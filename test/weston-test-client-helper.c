@@ -109,6 +109,79 @@ move_client (struct client *client, int x, int y)
   frame_callback_wait (client, &done);
 }
 
+static void
+xdg_shell_handle_ping (void *data, struct xdg_shell *xdg_shell, uint32_t serial)
+{
+  struct client *c = data;
+  c->last_ping_serial = serial;
+
+  xdg_shell_pong (xdg_shell, serial);
+
+  g_fprintf (stderr, "test-client: got ping with serial %u, sent pong\n", serial);
+}
+
+static const struct xdg_shell_listener xdg_shell_listener = {
+  xdg_shell_handle_ping
+};
+
+static void
+xdg_surface_handle_configure (void *data, struct xdg_surface *xdg_surface,
+                              int32_t width, int32_t height,
+                              struct wl_array *states, uint32_t serial)
+{
+  struct surface *s = data;
+  enum xdg_surface_state *st;
+
+  g_fprintf (stderr, "test-client: xdg_surface.configure:\n");
+  g_fprintf (stderr, "\twidth: %d, height: %d\n", width, height);
+
+  s->fullscreen = 0;
+  s->maximized = 0;
+  s->resizing = 0;
+  s->activated = 0;
+
+  wl_array_for_each(st, states)
+    {
+      switch (*st)
+      {
+      case XDG_SURFACE_STATE_FULLSCREEN:
+        g_fprintf (stderr, "\tfullscreen\n");
+        s->fullscreen = 1;
+        break;
+      case XDG_SURFACE_STATE_MAXIMIZED:
+        g_fprintf (stderr, "\tmaximized\n");
+        s->maximized = 1;
+        break;
+      case XDG_SURFACE_STATE_RESIZING:
+        g_fprintf (stderr, "\tresizing\n");
+        s->resizing = 1;
+        break;
+      case XDG_SURFACE_STATE_ACTIVATED:
+        g_fprintf (stderr, "\tactivated\n");
+        s->activated = 1;
+        break;
+      default:
+        g_error ("Unkown state (%d)", *st);
+      }
+  }
+
+  xdg_surface_ack_configure (xdg_surface, serial);
+}
+static void
+xdg_surface_handle_close (void *data, struct xdg_surface *xdg_surface)
+{
+  struct surface *s = data;
+
+  s->close = 1;
+
+  g_fprintf (stderr, "test-client: xdg_surface.close\n");
+}
+
+static const struct xdg_surface_listener xdg_surface_listener = {
+  xdg_surface_handle_configure,
+  xdg_surface_handle_close
+};
+
 int
 get_n_egl_buffers (struct client *client)
 {
@@ -528,6 +601,7 @@ handle_global (void *data, struct wl_registry *registry,
     {
       client->xdg_shell = wl_registry_bind (registry, id,
                                             &xdg_shell_interface, 1);
+      xdg_shell_add_listener (client->xdg_shell, &xdg_shell_listener, client);
     }
 
 }
@@ -662,6 +736,7 @@ client_create (int x, int y, int width, int height)
   surface->xdg_surface = xdg_shell_get_xdg_surface (client->xdg_shell,
                          surface->wl_surface);
   g_assert (surface->xdg_surface);
+  xdg_surface_add_listener (surface->xdg_surface, &xdg_surface_listener, surface);
 
   move_client(client, x, y);
 

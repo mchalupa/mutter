@@ -40,6 +40,7 @@ struct client
   struct output *output;
   struct surface *surface;
   int has_argb;
+  uint32_t last_ping_serial;
   struct wl_list global_list;
 };
 
@@ -108,6 +109,12 @@ struct surface
   int width;
   int height;
   void *data;
+
+  uint8_t activated    : 1;
+  uint32_t maximized   : 1;
+  uint32_t fullscreen  : 1;
+  uint32_t resizing    : 1;
+  uint32_t close       : 1;
 };
 
 struct client *

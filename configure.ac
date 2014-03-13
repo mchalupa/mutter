@@ -382,6 +382,7 @@ src/libmutter.pc
 src/compositor/plugins/Makefile
 src/meta/meta-version.h
 po/Makefile.in
+test/Makefile
 ])
 
 AC_OUTPUT

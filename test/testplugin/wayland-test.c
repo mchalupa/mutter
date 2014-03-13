@@ -34,6 +34,7 @@
 #include "meta-wayland-private.h"
 #include "meta-background-actor.h"
 #include "meta-background-group.h"
+#include "../mutter-test-runner.h"
 
 /* === MetaWaylandPlugin declarations === */
 #define META_TYPE_WAYLAND_TEST_PLUGIN (meta_wayland_test_plugin_get_type ())
@@ -84,6 +85,8 @@ struct _MetaWaylandTestPluginPrivate
   struct wl_resource *test_object_resource;
 
   gint filter_id;
+  gint idle_id;
+  gint pipe_fd;
 
   ClutterActor *background_group;
 };
@@ -134,6 +137,12 @@ meta_wayland_test_plugin_class_init (MetaWaylandTestPluginClass *klass)
   g_type_class_add_private (gobject_class, sizeof (MetaWaylandTestPluginPrivate));
 }
 
+static gboolean
+notify_parent (gpointer data);
+
+static gint
+get_ready_pipe (void);
+
 static void
 bind_test_object (struct wl_client *client,
                   void *data, uint32_t version, uint32_t id);
@@ -164,6 +173,18 @@ meta_wayland_test_plugin_init (MetaWaylandTestPlugin *self)
   priv->filter_id
         = clutter_event_add_filter((ClutterStage *) priv->compositor->stage,
                                    event_cb, NULL, self);
+
+  /* get filedescriptor of pipe from parent (from the test that runs mutter)
+   * so that mutter can notify parent that it's ready */
+  priv->pipe_fd = get_ready_pipe ();
+  if (priv->pipe_fd == -1)
+    {
+      /* keep mutter running in the case that user want do manual testing */
+      g_warning ("Mutter didn't find any pipe to connect to. Keep running.");
+      return;
+    }
+
+  priv->idle_id = meta_later_add (META_LATER_IDLE, notify_parent, self, NULL);
 }
 
 static void
@@ -226,6 +247,46 @@ start (MetaPlugin *plugin)
   on_monitors_changed (screen, plugin);
 
   clutter_actor_show (meta_get_stage_for_screen (screen));
+}
+
+static gint
+get_ready_pipe (void)
+{
+  const gchar *pipe;
+  gchar *end;
+  gint fd = -1;
+
+  pipe = g_getenv (MUTTER_WAYLAND_READY_PIPE);
+  if (pipe)
+    {
+      fd = g_ascii_strtoll (pipe, &end, 0);
+      g_assert (*end == '\0');
+    }
+
+  return fd;
+}
+
+static gboolean
+notify_parent (gpointer data)
+{
+  MetaWaylandTestPlugin *plugin = data;
+  MetaWaylandTestPluginPrivate *priv = plugin->priv;
+  ssize_t n;
+  int val = MUTTER_WAYLAND_READY_SIGNAL;
+
+  g_assert (priv->pipe_fd >= 0);
+
+  n = write (priv->pipe_fd, &val, sizeof (val));
+  g_assert (n == sizeof (val) && "Writing to socket failed");
+
+  /* clean up */
+  close (priv->pipe_fd);
+  priv->pipe_fd = -1;
+
+  meta_later_remove (priv->idle_id);
+  priv->idle_id = 0;
+
+  return TRUE;
 }
 
 static gboolean

@@ -23,7 +23,44 @@
  * THIS SOFTWARE.
  */
 
+#include <glib.h>
+
 #define MUTTER_WAYLAND_READY_PIPE "MUTTER_WAYLAND_READY_PIPE"
 
 /* sizeof signal == sizeof int */
 #define MUTTER_WAYLAND_READY_SIGNAL 0xa
+
+/* this environment variable affects behaviour of the test. If it's set to
+ *  "none": then tests MUTTER_TEST and MUTTER_FAIL_TEST won't spawn mutter
+ *          at all (useful when tester has mutter already running)
+ *  "native": spawn mutter as display server
+ */
+#define MUTTER_TEST_SPAWN_MUTTER "MUTTER_TEST_SPAWN_MUTTER"
+#define MUTTER_TEST_TIMEOUT "MUTTER_TEST_TIMEOUT"
+#define MUTTER_TEST_NO_FORK "MUTTER_TEST_NO_FORK"
+
+struct mutter_test {
+  const char *name;
+  GTestFunc func;
+
+  gboolean should_fail;
+} __attribute__ ((aligned (16)));
+
+/* inspired by wayland's test-runner.h, thanks */
+#define CREATE_TEST(name, sf)                         \
+  static void name(void);                             \
+                                                      \
+  const struct mutter_test test##name                 \
+    __attribute__ ((section ("test_section"))) = {    \
+    #name, name, (sf)                                 \
+  };                                                  \
+                                                      \
+  static void name(void)
+
+#define MUTTER_TEST(name) CREATE_TEST(name, FALSE)
+
+/* MUTTER_FAIL_TESTs are good only for sanity testing */ 
+#define MUTTER_FAIL_TEST(name) CREATE_TEST(name, TRUE)
+
+/* skip test */
+#define SKIP 77

@@ -23,7 +23,40 @@
  * THIS SOFTWARE.
  */
 
+#include <glib.h>
+
 #define MUTTER_WAYLAND_READY_PIPE "MUTTER_WAYLAND_READY_PIPE"
 
 /* sizeof signal == sizeof int */
 #define MUTTER_WAYLAND_READY_SIGNAL 0xa
+
+struct mutter_test {
+  const char *name;
+  GTestFunc func;
+
+  gboolean spawn_mutter;
+  gboolean should_fail;
+} __attribute__ ((aligned (16)));
+
+/* inspired by wayland's test-runner.h, thanks */
+#define CREATE_TEST(name, spawn, sf)                  \
+  static void name(void);                             \
+                                                      \
+  const struct mutter_test test##name                 \
+    __attribute__ ((section ("test_section"))) = {    \
+    #name, name, (spawn), (sf)                        \
+  };                                                  \
+                                                      \
+  static void name(void)
+
+/* TEST is test that don't need mutter running */
+#define TEST(name) CREATE_TEST(name, FALSE, FALSE)
+
+/* FAIL_TEST is test that don't need mutter running and should fail */
+#define FAIL_TEST(name) CREATE_TEST(name, FALSE, TRUE)
+
+/* MUTTER_TEST needs mutter running */
+#define MUTTER_TEST(name) CREATE_TEST(name, TRUE, FALSE)
+
+/* MUTTER_FAIL_TEST needs mutter running and should fail */
+#define MUTTER_FAIL_TEST(name) CREATE_TEST(name, TRUE, TRUE)

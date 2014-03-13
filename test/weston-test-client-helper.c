@@ -24,27 +24,16 @@
 #include <config.h>
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/mman.h>
 #include <glib.h>
+#include <glib/gprintf.h>
 #include <errno.h>
 
 #include "weston-test-client-helper.h"
 #include "xdg-shell-client-protocol.h"
-
-static inline void *
-xzalloc (size_t size)
-{
-  void *p;
-
-  p = calloc (1, size);
-  assert (p);
-
-  return p;
-}
 
 int
 surface_contains (struct surface *surface, int x, int y)
@@ -142,8 +131,8 @@ pointer_handle_enter (void *data, struct wl_pointer *wl_pointer,
   pointer->x = wl_fixed_to_int (x);
   pointer->y = wl_fixed_to_int (y);
 
-  fprintf (stderr, "test-client: got pointer enter %d %d, surface %p\n",
-           pointer->x, pointer->y, pointer->focus);
+  g_fprintf (stderr, "test-client: got pointer enter %d %d, surface %p\n",
+             pointer->x, pointer->y, pointer->focus);
 }
 
 static void
@@ -154,8 +143,8 @@ pointer_handle_leave (void *data, struct wl_pointer *wl_pointer,
 
   pointer->focus = NULL;
 
-  fprintf (stderr, "test-client: got pointer leave, surface %p\n",
-           wl_surface_get_user_data (wl_surface));
+  g_fprintf (stderr, "test-client: got pointer leave, surface %p\n",
+             wl_surface_get_user_data (wl_surface));
 }
 
 static void
@@ -167,8 +156,8 @@ pointer_handle_motion (void *data, struct wl_pointer *wl_pointer,
   pointer->x = wl_fixed_to_int (x);
   pointer->y = wl_fixed_to_int (y);
 
-  fprintf (stderr, "test-client: got pointer motion %d %d\n",
-           pointer->x, pointer->y);
+  g_fprintf (stderr, "test-client: got pointer motion %d %d\n",
+             pointer->x, pointer->y);
 }
 
 static void
@@ -181,16 +170,16 @@ pointer_handle_button (void *data, struct wl_pointer *wl_pointer,
   pointer->button = button;
   pointer->state = state;
 
-  fprintf (stderr, "test-client: got pointer button %u %u\n",
-           button, state);
+  g_fprintf (stderr, "test-client: got pointer button %u %u\n",
+             button, state);
 }
 
 static void
 pointer_handle_axis (void *data, struct wl_pointer *wl_pointer,
                      uint32_t time, uint32_t axis, wl_fixed_t value)
 {
-  fprintf (stderr, "test-client: got pointer axis %u %f\n",
-           axis, wl_fixed_to_double (value));
+  g_fprintf (stderr, "test-client: got pointer axis %u %f\n",
+             axis, wl_fixed_to_double (value));
 }
 
 static const struct wl_pointer_listener pointer_listener =
@@ -208,7 +197,7 @@ keyboard_handle_keymap (void *data, struct wl_keyboard *wl_keyboard,
 {
   close (fd);
 
-  fprintf (stderr, "test-client: got keyboard keymap\n");
+  g_fprintf (stderr, "test-client: got keyboard keymap\n");
 }
 
 static void
@@ -220,8 +209,8 @@ keyboard_handle_enter (void *data, struct wl_keyboard *wl_keyboard,
 
   keyboard->focus = wl_surface_get_user_data (wl_surface);
 
-  fprintf (stderr, "test-client: got keyboard enter, surface %p\n",
-           keyboard->focus);
+  g_fprintf (stderr, "test-client: got keyboard enter, surface %p\n",
+             keyboard->focus);
 }
 
 static void
@@ -232,8 +221,8 @@ keyboard_handle_leave (void *data, struct wl_keyboard *wl_keyboard,
 
   keyboard->focus = NULL;
 
-  fprintf (stderr, "test-client: got keyboard leave, surface %p\n",
-           wl_surface_get_user_data (wl_surface));
+  g_fprintf (stderr, "test-client: got keyboard leave, surface %p\n",
+             wl_surface_get_user_data (wl_surface));
 }
 
 static void
@@ -246,7 +235,7 @@ keyboard_handle_key (void *data, struct wl_keyboard *wl_keyboard,
   keyboard->key = key;
   keyboard->state = state;
 
-  fprintf (stderr, "test-client: got keyboard key %u %u\n", key, state);
+  g_fprintf (stderr, "test-client: got keyboard key %u %u\n", key, state);
 }
 
 static void
@@ -262,8 +251,8 @@ keyboard_handle_modifiers (void *data, struct wl_keyboard *wl_keyboard,
   keyboard->mods_locked = mods_locked;
   keyboard->group = group;
 
-  fprintf (stderr, "test-client: got keyboard modifiers %u %u %u %u\n",
-           mods_depressed, mods_latched, mods_locked, group);
+  g_fprintf (stderr, "test-client: got keyboard modifiers %u %u %u %u\n",
+             mods_depressed, mods_latched, mods_locked, group);
 }
 
 static const struct wl_keyboard_listener keyboard_listener =
@@ -283,8 +272,8 @@ surface_enter (void *data,
 
   surface->output = wl_output_get_user_data (output);
 
-  fprintf (stderr, "test-client: got surface enter output %p\n",
-           surface->output);
+  g_fprintf (stderr, "test-client: got surface enter output %p\n",
+             surface->output);
 }
 
 static void
@@ -295,8 +284,8 @@ surface_leave (void *data,
 
   surface->output = NULL;
 
-  fprintf (stderr, "test-client: got surface leave output %p\n",
-           wl_output_get_user_data (output));
+  g_fprintf (stderr, "test-client: got surface leave output %p\n",
+             wl_output_get_user_data (output));
 }
 
 static const struct wl_surface_listener surface_listener =
@@ -379,8 +368,8 @@ test_handle_pointer_position (void *data, struct wl_test *wl_test,
   test->pointer_x = wl_fixed_to_int (x);
   test->pointer_y = wl_fixed_to_int (y);
 
-  fprintf (stderr, "test-client: got global pointer %d %d\n",
-           test->pointer_x, test->pointer_y);
+  g_fprintf (stderr, "test-client: got global pointer %d %d\n",
+             test->pointer_x, test->pointer_y);
 }
 
 static void
@@ -407,7 +396,7 @@ seat_handle_capabilities (void *data, struct wl_seat *seat,
 
   if ((caps & WL_SEAT_CAPABILITY_POINTER) && !input->pointer)
     {
-      pointer = xzalloc (sizeof *pointer);
+      pointer = g_new0 (struct pointer, 1);
       pointer->wl_pointer = wl_seat_get_pointer (seat);
       wl_pointer_set_user_data (pointer->wl_pointer, pointer);
       wl_pointer_add_listener (pointer->wl_pointer, &pointer_listener,
@@ -417,13 +406,13 @@ seat_handle_capabilities (void *data, struct wl_seat *seat,
   else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && input->pointer)
     {
       wl_pointer_destroy (input->pointer->wl_pointer);
-      free (input->pointer);
+      g_free (input->pointer);
       input->pointer = NULL;
     }
 
   if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !input->keyboard)
     {
-      keyboard = xzalloc (sizeof *keyboard);
+      keyboard = g_new0 (struct keyboard, 1);
       keyboard->wl_keyboard = wl_seat_get_keyboard (seat);
       wl_keyboard_set_user_data (keyboard->wl_keyboard, keyboard);
       wl_keyboard_add_listener (keyboard->wl_keyboard, &keyboard_listener,
@@ -433,7 +422,7 @@ seat_handle_capabilities (void *data, struct wl_seat *seat,
   else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && input->keyboard)
     {
       wl_keyboard_destroy (input->keyboard->wl_keyboard);
-      free (input->keyboard);
+      g_free (input->keyboard);
       input->keyboard = NULL;
     }
 }
@@ -493,49 +482,49 @@ handle_global (void *data, struct wl_registry *registry,
   struct test *test;
   struct global *global;
 
-  global = xzalloc (sizeof *global);
+  global = g_new0 (struct global, 1);
   global->name = id;
-  global->interface = strdup (interface);
-  assert (interface);
+  global->interface = g_strdup (interface);
+  g_assert (interface);
   global->version = version;
   wl_list_insert (client->global_list.prev, &global->link);
 
-  if (strcmp (interface, "wl_compositor") == 0)
+  if (g_strcmp0 (interface, "wl_compositor") == 0)
     {
       client->wl_compositor = wl_registry_bind (registry, id,
                               &wl_compositor_interface, 1);
     }
-  else if (strcmp (interface, "wl_seat") == 0)
+  else if (g_strcmp0 (interface, "wl_seat") == 0)
     {
-      input = xzalloc (sizeof *input);
+      input = g_new0 (struct input, 1);
       input->wl_seat = wl_registry_bind (registry, id,
                                          &wl_seat_interface, 1);
       wl_seat_add_listener (input->wl_seat, &seat_listener, input);
       client->input = input;
     }
-  else if (strcmp (interface, "wl_shm") == 0)
+  else if (g_strcmp0 (interface, "wl_shm") == 0)
     {
       client->wl_shm = wl_registry_bind (registry, id, &wl_shm_interface, 1);
       wl_shm_add_listener (client->wl_shm, &shm_listener, client);
     }
-  else if (strcmp (interface, "wl_output") == 0)
+  else if (g_strcmp0 (interface, "wl_output") == 0)
     {
-      output = xzalloc (sizeof *output);
+      output = g_new0 (struct output, 1);
       output->wl_output = wl_registry_bind (registry, id,
                                             &wl_output_interface, 1);
       wl_output_add_listener (output->wl_output,
                               &output_listener, output);
       client->output = output;
     }
-  else if (strcmp (interface, "wl_test") == 0)
+  else if (g_strcmp0 (interface, "wl_test") == 0)
     {
-      test = xzalloc (sizeof *test);
+      test = g_new0 (struct test, 1);
       test->wl_test = wl_registry_bind (registry, id,
                                         &wl_test_interface, 1);
       wl_test_add_listener (test->wl_test, &test_listener, test);
       client->test = test;
     }
-  else if (strcmp (interface, "xdg_shell") == 0)
+  else if (g_strcmp0 (interface, "xdg_shell") == 0)
     {
       client->xdg_shell = wl_registry_bind (registry, id,
                                             &xdg_shell_interface, 1);
@@ -554,7 +543,7 @@ skip (const char *fmt, ...)
   va_list argp;
 
   va_start (argp, fmt);
-  vfprintf (stderr, fmt, argp);
+  g_vfprintf (stderr, fmt, argp);
   va_end (argp);
 
   /* automake tests uses exit code 77. weston-test-runner will see
@@ -570,7 +559,8 @@ expect_protocol_error(struct client *client,
                       uint32_t code)
 {
   int err;
-  uint32_t errcode, failed = 0;
+  uint32_t errcode;
+  gboolean failed = FALSE;
   const struct wl_interface *interface;
   unsigned int id;
 
@@ -579,8 +569,8 @@ expect_protocol_error(struct client *client,
 
   err = wl_display_get_error(client->wl_display);
 
-  assert(err && "Expected protocol error but nothing came");
-  assert(err == EPROTO && "Expected protocol error but got local error");
+  g_assert(err && "Expected protocol error but nothing came");
+  g_assert(err == EPROTO && "Expected protocol error but got local error");
 
   errcode = wl_display_get_protocol_error(client->wl_display,
                                           &interface, &id);
@@ -588,37 +578,37 @@ expect_protocol_error(struct client *client,
   /* check error */
   if (errcode != code)
     {
-      fprintf(stderr, "Should get error code %d but got %d\n",
-              code, errcode);
-      failed = 1;
+      g_fprintf(stderr, "Should get error code %d but got %d\n",
+                code, errcode);
+      failed = TRUE;
     }
 
   /* this should be definitely set */
-  assert(interface);
+  g_assert(interface);
 
-  if (strcmp(intf->name, interface->name) != 0)
+  if (g_strcmp0(intf->name, interface->name) != 0)
     {
-      fprintf(stderr, "Should get interface '%s' but got '%s'\n",
-              intf->name, interface->name);
-      failed = 1;
+      g_fprintf(stderr, "Should get interface '%s' but got '%s'\n",
+                intf->name, interface->name);
+      failed = TRUE;
     }
 
   if (failed)
     {
-      fprintf(stderr, "Expected other protocol error\n");
+      g_fprintf(stderr, "Expected other protocol error\n");
       abort();
     }
 
   /* all OK */
-  fprintf(stderr, "Got expected protocol error on '%s' (object id: %d) "
-          "with code %d\n", interface->name, id, errcode);
+  g_fprintf(stderr, "Got expected protocol error on '%s' (object id: %d) "
+            "with code %d\n", interface->name, id, errcode);
 }
 
 static void
 log_handler (const char *fmt, va_list args)
 {
-  fprintf (stderr, "libwayland: ");
-  vfprintf (stderr, fmt, args);
+  g_fprintf (stderr, "libwayland: ");
+  g_vfprintf (stderr, fmt, args);
 }
 
 struct client *
@@ -630,9 +620,9 @@ client_create (int x, int y, int width, int height)
   wl_log_set_handler_client (log_handler);
 
   /* connect to display */
-  client = xzalloc (sizeof *client);
+  client = g_new0 (struct client, 1);
   client->wl_display = wl_display_connect (NULL);
-  assert (client->wl_display);
+  g_assert (client->wl_display);
   wl_list_init (&client->global_list);
 
   /* setup registry so we can bind to interfaces */
@@ -644,18 +634,18 @@ client_create (int x, int y, int width, int height)
   wl_display_roundtrip (client->wl_display);
 
   /* must have WL_SHM_FORMAT_ARGB32 */
-  assert (client->has_argb);
+  g_assert (client->has_argb);
 
   /* must have wl_test interface */
-  assert (client->test);
+  g_assert (client->test);
 
   /* must have an output */
-  assert (client->output);
+  g_assert (client->output);
 
   /* initialize the client surface */
-  surface = xzalloc (sizeof *surface);
+  surface = g_new0 (struct surface, 1);
   surface->wl_surface = wl_compositor_create_surface (client->wl_compositor);
-  assert (surface->wl_surface);
+  g_assert (surface->wl_surface);
 
   wl_surface_add_listener (surface->wl_surface, &surface_listener, surface);
 
@@ -671,7 +661,7 @@ client_create (int x, int y, int width, int height)
 
   surface->xdg_surface = xdg_shell_get_xdg_surface (client->xdg_shell,
                          surface->wl_surface);
-  assert (surface->xdg_surface);
+  g_assert (surface->xdg_surface);
 
   move_client(client, x, y);
 

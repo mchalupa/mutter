@@ -5,7 +5,8 @@ TESTS =					\
 	sanity-test			\
 	plugin-test			\
 	event-test			\
-	button-test
+	button-test			\
+	bad-buffer-test
 
 check_PROGRAMS = $(TESTS)
 
@@ -26,6 +27,7 @@ sanity_test_SOURCES = sanity-test.c $(test_runner_src)
 plugin_test_SOURCES = plugin-test.c $(test_runner_src)
 event_test_SOURCES = event-test.c $(test_runner_src)
 button_test_SOURCES = button-test.c $(test_runner_src)
+bad_buffer_test_SOURCES = bad-buffer-test.c $(test_runner_src)
 
 
 AM_CPPFLAGS = -I$(top_builddir)/src/wayland

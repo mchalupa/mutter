@@ -3,7 +3,8 @@ SUBDIRS = testplugin
 
 TESTS =					\
 	sanity-test			\
-	plugin-test
+	plugin-test			\
+	event-test
 
 check_PROGRAMS = $(TESTS)
 
@@ -22,6 +23,7 @@ test_runner_src = 			\
 
 sanity_test_SOURCES = sanity-test.c $(test_runner_src)
 plugin_test_SOURCES = plugin-test.c $(test_runner_src)
+event_test_SOURCES = event-test.c $(test_runner_src)
 
 
 AM_CPPFLAGS = -I$(top_builddir)/src/wayland

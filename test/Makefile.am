@@ -1,4 +1,6 @@
 
+SUBDIRS = testplugin
+
 BUILT_SOURCES =							\
 	wayland-test-protocol.c		\
 	wayland-test-server-protocol.h	\

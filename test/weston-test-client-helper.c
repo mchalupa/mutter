@@ -27,9 +27,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <glib.h>
+#include <errno.h>
 
-#include "../shared/os-compatibility.h"
 #include "weston-test-client-helper.h"
+#include "xdg-shell-client-protocol.h"
 
 static inline void *
 xzalloc(size_t size)
@@ -296,34 +298,53 @@ static const struct wl_surface_listener surface_listener = {
 struct wl_buffer *
 create_shm_buffer(struct client *client, int width, int height, void **pixels)
 {
-	struct wl_shm *shm = client->wl_shm;
-	int stride = width * 4;
-	int size = stride * height;
-	struct wl_shm_pool *pool;
-	struct wl_buffer *buffer;
-	int fd;
-	void *data;
+  char filename[] = "/tmp/wayland-shm-XXXXXX";
+  struct wl_shm *shm = client->wl_shm;
+  struct wl_shm_pool *pool;
+  int fd, size, stride;
+  void *data;
+  struct wl_buffer *buffer;
 
-	fd = os_create_anonymous_file(size);
-	assert(fd >= 0);
+  fd = mkstemp (filename);
+  if (fd < 0)
+    {
+      g_critical (G_STRLOC ": Unable to create temporary file (%s): %s",
+                  filename, g_strerror (errno));
+      return NULL;
+    }
 
-	data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (data == MAP_FAILED) {
-		close(fd);
-		assert(data != MAP_FAILED);
-	}
+  stride = width * 4;
+  size = stride * height;
+  if (ftruncate (fd, size) < 0)
+    {
+      g_critical (G_STRLOC ": Truncating temporary file failed: %s",
+                  g_strerror (errno));
+      close (fd);
+      return NULL;
+    }
 
-	pool = wl_shm_create_pool(shm, fd, size);
-	buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride,
-					   WL_SHM_FORMAT_ARGB8888);
-	wl_shm_pool_destroy(pool);
+  data = mmap (NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  unlink (filename);
 
-	close(fd);
+  if (data == MAP_FAILED)
+    {
+      g_critical (G_STRLOC ": mmap'ping temporary file failed: %s",
+                  g_strerror (errno));
+      close (fd);
+      return NULL;
+    }
 
-	if (pixels)
-		*pixels = data;
+  pool = wl_shm_create_pool(shm, fd, size);
+  buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride,
+                                     WL_SHM_FORMAT_ARGB8888);
+  wl_shm_pool_destroy(pool);
 
-	return buffer;
+  close (fd);
+
+  if (pixels)
+    *pixels = data;
+
+  return buffer;
 }
 
 static void
@@ -489,7 +510,12 @@ handle_global(void *data, struct wl_registry *registry,
 					 &wl_test_interface, 1);
 		wl_test_add_listener(test->wl_test, &test_listener, test);
 		client->test = test;
+	} else if (strcmp(interface, "xdg_shell") == 0) {
+		client->xdg_shell =
+			wl_registry_bind(registry, id,
+					 &xdg_shell_interface, 1);
 	}
+
 }
 
 static const struct wl_registry_listener registry_listener = {
@@ -505,9 +531,8 @@ skip(const char *fmt, ...)
 	vfprintf(stderr, fmt, argp);
 	va_end(argp);
 
-	/* automake tests uses exit code 77, but we don't have a good
-	 * way to make weston exit with that from here. */
-	exit(0);
+	/* automake tests uses exit code 77 */
+	exit(77);
 }
 
 static void
@@ -565,7 +590,11 @@ client_create(int x, int y, int width, int height)
 	surface->wl_buffer = create_shm_buffer(client, width, height,
 					       &surface->data);
 
-	memset(surface->data, 64, width * height * 4);
+	memset (surface->data, 0xaf, width * height * 4);
+
+	surface->xdg_surface = xdg_shell_get_xdg_surface (client->xdg_shell,
+							  surface->wl_surface);
+	assert(surface->xdg_surface);
 
 	move_client(client, x, y);
 

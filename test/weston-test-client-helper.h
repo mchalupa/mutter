@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#include <assert.h>
+#include <glib.h>
 #include "wayland-test-client-protocol.h"
 
 struct client
@@ -123,7 +123,7 @@ void
 move_client (struct client *client, int x, int y);
 
 #define client_roundtrip(c) do { \
-  assert(wl_display_roundtrip((c)->wl_display) >= 0); \
+  g_assert(wl_display_roundtrip((c)->wl_display) >= 0); \
 } while (0)
 
 struct wl_callback *
@@ -132,7 +132,7 @@ frame_callback_set (struct wl_surface *surface, int *done);
 int
 frame_callback_wait_nofail(struct client *client, int *done);
 
-#define frame_callback_wait(c, d) assert(frame_callback_wait_nofail((c), (d)))
+#define frame_callback_wait(c, d) g_assert(frame_callback_wait_nofail((c), (d)))
 
 int
 get_n_egl_buffers (struct client *client);

@@ -83,6 +83,8 @@ struct _MetaWaylandTestPluginPrivate
   MetaWaylandCompositor *compositor;
   struct wl_resource *test_object_resource;
 
+  gint filter_id;
+
   ClutterActor *background_group;
 };
 /* === END MetaWaylandPlugin declarations === */
@@ -101,6 +103,10 @@ plugin_info (MetaPlugin *plugin)
 static void
 meta_wayland_test_plugin_dispose (GObject *object)
 {
+  MetaWaylandTestPluginPrivate *priv = META_WAYLAND_TEST_PLUGIN (object)->priv;
+
+  clutter_event_remove_filter (priv->filter_id);
+
   G_OBJECT_CLASS (meta_wayland_test_plugin_parent_class)->dispose (object);
 }
 
@@ -132,6 +138,9 @@ static void
 bind_test_object (struct wl_client *client,
                   void *data, uint32_t version, uint32_t id);
 
+static gboolean
+event_cb (const ClutterEvent *event, gpointer data);
+
 static void
 meta_wayland_test_plugin_init (MetaWaylandTestPlugin *self)
 {
@@ -151,6 +160,10 @@ meta_wayland_test_plugin_init (MetaWaylandTestPlugin *self)
   if (wl_global_create (priv->compositor->wayland_display,
                         &wl_test_interface, 1, self, bind_test_object) == NULL)
     g_error ("Global (wl_test) initialization failed");
+
+  priv->filter_id
+        = clutter_event_add_filter((ClutterStage *) priv->compositor->stage,
+                                   event_cb, NULL, self);
 }
 
 static void
@@ -215,6 +228,35 @@ start (MetaPlugin *plugin)
   clutter_actor_show (meta_get_stage_for_screen (screen));
 }
 
+static gboolean
+event_cb (const ClutterEvent *event, gpointer data)
+{
+  ClutterPoint p;
+  MetaWaylandTestPlugin *plugin = data;
+  ClutterInputDevice *dev;
+
+  /* The filter is added before binding to wl_test, because we need to add
+   * it before any meta filter. That means that the resource does not need
+   * to exist yet */
+  if (plugin->priv->test_object_resource == NULL)
+    return CLUTTER_EVENT_PROPAGATE;
+
+  if (clutter_event_type (event) == CLUTTER_MOTION)
+    {
+      dev = plugin->priv->compositor->seat->pointer.device;
+      g_assert(dev);
+
+      clutter_input_device_get_coords (dev, NULL, &p);
+
+      wl_test_send_pointer_position (plugin->priv->test_object_resource,
+                                      wl_fixed_from_double (p.x),
+                                      wl_fixed_from_double (p.y));
+    }
+
+  /* we always must return this */
+  return CLUTTER_EVENT_PROPAGATE;
+}
+
 static void
 destroy_test_object_resource (struct wl_resource *resource)
 {
@@ -222,6 +264,8 @@ destroy_test_object_resource (struct wl_resource *resource)
 
   plugin->priv->test_object_resource = NULL;
 }
+
+extern const struct wl_test_interface wl_test_implementation;
 
 static void
 bind_test_object (struct wl_client *client,
@@ -237,7 +281,7 @@ bind_test_object (struct wl_client *client,
       return;
     }
 
-  wl_resource_set_implementation (res, NULL /* impl */, plugin,
+  wl_resource_set_implementation (res, &wl_test_implementation, plugin,
                                   destroy_test_object_resource);
 
   plugin->priv->test_object_resource = res;

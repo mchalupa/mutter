@@ -28,98 +28,106 @@
 #include <assert.h>
 #include "wayland-test-client-protocol.h"
 
-struct client {
-	struct wl_display *wl_display;
-	struct wl_registry *wl_registry;
-	struct wl_compositor *wl_compositor;
-	struct wl_shm *wl_shm;
-	struct xdg_shell *xdg_shell;
-	struct test *test;
-	struct input *input;
-	struct output *output;
-	struct surface *surface;
-	int has_argb;
-	struct wl_list global_list;
+struct client
+{
+  struct wl_display *wl_display;
+  struct wl_registry *wl_registry;
+  struct wl_compositor *wl_compositor;
+  struct wl_shm *wl_shm;
+  struct xdg_shell *xdg_shell;
+  struct test *test;
+  struct input *input;
+  struct output *output;
+  struct surface *surface;
+  int has_argb;
+  struct wl_list global_list;
 };
 
-struct global {
-	uint32_t name;
-	char *interface;
-	uint32_t version;
-	struct wl_list link;
+struct global
+{
+  uint32_t name;
+  char *interface;
+  uint32_t version;
+  struct wl_list link;
 };
 
-struct test {
-	struct wl_test *wl_test;
-	int pointer_x;
-	int pointer_y;
-	uint32_t n_egl_buffers;
+struct test
+{
+  struct wl_test *wl_test;
+  int pointer_x;
+  int pointer_y;
+  uint32_t n_egl_buffers;
 };
 
-struct input {
-	struct wl_seat *wl_seat;
-	struct pointer *pointer;
-	struct keyboard *keyboard;
+struct input
+{
+  struct wl_seat *wl_seat;
+  struct pointer *pointer;
+  struct keyboard *keyboard;
 };
 
-struct pointer {
-	struct wl_pointer *wl_pointer;
-	struct surface *focus;
-	int x;
-	int y;
-	uint32_t button;
-	uint32_t state;
+struct pointer
+{
+  struct wl_pointer *wl_pointer;
+  struct surface *focus;
+  int x;
+  int y;
+  uint32_t button;
+  uint32_t state;
 };
 
-struct keyboard {
-	struct wl_keyboard *wl_keyboard;
-	struct surface *focus;
-	uint32_t key;
-	uint32_t state;
-	uint32_t mods_depressed;
-	uint32_t mods_latched;
-	uint32_t mods_locked;
-	uint32_t group;
+struct keyboard
+{
+  struct wl_keyboard *wl_keyboard;
+  struct surface *focus;
+  uint32_t key;
+  uint32_t state;
+  uint32_t mods_depressed;
+  uint32_t mods_latched;
+  uint32_t mods_locked;
+  uint32_t group;
 };
 
-struct output {
-	struct wl_output *wl_output;
-	int x;
-	int y;
-	int width;
-	int height;
+struct output
+{
+  struct wl_output *wl_output;
+  int x;
+  int y;
+  int width;
+  int height;
 };
 
-struct surface {
-	struct wl_surface *wl_surface;
-	struct xdg_surface *xdg_surface;
-	struct wl_buffer *wl_buffer;
-	struct output *output;
-	int x;
-	int y;
-	int width;
-	int height;
-	void *data;
+struct surface
+{
+  struct wl_surface *wl_surface;
+  struct xdg_surface *xdg_surface;
+  struct wl_buffer *wl_buffer;
+  struct output *output;
+  int x;
+  int y;
+  int width;
+  int height;
+  void *data;
 };
 
 struct client *
-client_create(int x, int y, int width, int height);
+client_create (int x, int y, int width, int height);
 
 struct wl_buffer *
-create_shm_buffer(struct client *client, int width, int height, void **pixels);
+create_shm_buffer (struct client *client, int width, int height, void **pixels);
 
 int
-surface_contains(struct surface *surface, int x, int y);
+surface_contains (struct surface *surface, int x, int y);
 
 void
-move_client(struct client *client, int x, int y);
+move_client (struct client *client, int x, int y);
 
 #define client_roundtrip(c) do { \
-	assert(wl_display_roundtrip((c)->wl_display) >= 0); \
+  assert(wl_display_roundtrip((c)->wl_display) >= 0); \
 } while (0)
 
 struct wl_callback *
-frame_callback_set(struct wl_surface *surface, int *done);
+frame_callback_set (struct wl_surface *surface, int *done);
 
 int
 frame_callback_wait_nofail(struct client *client, int *done);
@@ -127,13 +135,13 @@ frame_callback_wait_nofail(struct client *client, int *done);
 #define frame_callback_wait(c, d) assert(frame_callback_wait_nofail((c), (d)))
 
 int
-get_n_egl_buffers(struct client *client);
+get_n_egl_buffers (struct client *client);
 
 void
-skip(const char *fmt, ...);
+skip (const char *fmt, ...);
 
 void
 expect_protocol_error(struct client *client,
-		      const struct wl_interface *intf, uint32_t code);
+                      const struct wl_interface *intf, uint32_t code);
 
 #endif

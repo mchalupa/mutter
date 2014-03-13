@@ -889,3 +889,36 @@ client_create (int x, int y, int width, int height)
 
   return client;
 }
+
+void
+client_destroy (struct client *client)
+{
+  client->wl_display = wl_display_connect (NULL);
+
+  wl_shm_destroy (client->wl_shm);
+
+  xdg_surface_destroy (client->surface->xdg_surface);
+  xdg_shell_destroy (client->xdg_shell);
+
+  wl_surface_destroy (client->surface->wl_surface);
+
+  munmap (client->surface->data,
+          client->surface->width * client->surface->height * 4);
+  wl_buffer_destroy (client->surface->wl_buffer);
+
+  if (client->input->pointer->wl_pointer)
+    wl_pointer_destroy (client->input->pointer->wl_pointer);
+  if (client->input->keyboard->wl_keyboard)
+    wl_keyboard_destroy (client->input->keyboard->wl_keyboard);
+
+  wl_seat_destroy (client->input->wl_seat);
+
+  wl_test_destroy (client->test->wl_test);
+  wl_output_destroy (client->output->wl_output);
+  wl_compositor_destroy (client->wl_compositor);
+  wl_registry_destroy (client->wl_registry);
+
+  wl_display_disconnect (client->wl_display);
+
+  free (client);
+}

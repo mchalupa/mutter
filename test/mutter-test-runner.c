@@ -40,6 +40,12 @@ struct mutter_info
 /* each test needs environment. Get it once and keep it here */
 static gchar **environ = NULL;
 
+/* set this to 1 if the mutter-wayland should be run only once for all tests */
+static gint run_once = 0;
+/* set this to 1 if mutter should not run at all (tester has mtter instance
+ * running already */
+static gint dont_run_mutter = 0;
+
 static const gchar *
 find_mutter (void)
 {
@@ -124,40 +130,18 @@ spawn_mutter (struct mutter_info *m)
 }
 
 static void
-test_setup (gpointer fixture, gconstpointer data)
+stop_and_check_mutter (struct mutter_info *m)
 {
-  ssize_t n;
-  gint val;
-  struct mutter_info *m = fixture;
-  const struct mutter_test *t = data;
+  gint status;
+  gint wstat;
 
-  if (!t->spawn_mutter)
-    return;
+  wstat = waitpid (m->pid, &status, WNOHANG);
 
-  spawn_mutter (m);
-
-  /* wait for mutter to be initialized */
-  n = read (m->pipe, &val, sizeof (int));
-  g_assert (n == sizeof (int) && "Failed reading pipe");
-  g_assert (val == MUTTER_WAYLAND_READY_SIGNAL);
-}
-
-static void
-test_teardown (gpointer fixture, gconstpointer data)
-{
-  struct mutter_info *m = fixture;
-  const struct mutter_test *t = data;
-
-  if (!t->spawn_mutter)
-    return;
-
-  g_assert (m->pid > 1);
-
-  /* check if mutter did not crashed */
-  switch (waitpid (m->pid, &status, WNOHANG))
+  /* check if mutter did not crash */
+  switch (wstat)
     {
     case -1:
-      g_error ("Failed waiting for child");
+      g_error ("Failed waiting for mutter");
       break;
     case 0: /* all OK, not exited yet */
       kill (m->pid, SIGTERM);
@@ -167,10 +151,49 @@ test_teardown (gpointer fixture, gconstpointer data)
       break;
     default:
       /* mutter should be still running if everything went ok. The test failed */
-      g_test_message ("FAILED: Mutter prematurely exited with status %d",
+      g_test_message ("failed: mutter prematurely exited with status %d",
                       WEXITSTATUS (status));
       g_test_fail ();
     }
+
+    g_spawn_close_pid (m->pid);
+}
+
+static void
+wait_for_mutter_initialization (struct mutter_info *m)
+{
+  ssize_t n;
+  gint val;
+
+  n = read (m->pipe, &val, sizeof (int));
+  g_assert (n == sizeof (int) && "Failed reading pipe");
+  g_assert (val == MUTTER_WAYLAND_READY_SIGNAL);
+}
+
+static void
+test_setup (gpointer fixture, gconstpointer data)
+{
+  struct mutter_info *m = fixture;
+  const struct mutter_test *t = data;
+
+  if (!t->spawn_mutter || run_once || dont_run_mutter)
+    return;
+
+  spawn_mutter (m);
+  wait_for_mutter_initialization (m);
+}
+
+static void
+test_teardown (gpointer fixture, gconstpointer data)
+{
+  struct mutter_info *m = fixture;
+  const struct mutter_test *t = data;
+
+  if (!t->spawn_mutter || run_once || dont_run_mutter)
+    return;
+
+  g_assert (m->pid > 1);
+  stop_and_check_mutter (m);
 }
 
 static void
@@ -181,7 +204,7 @@ test_run (gpointer fixture, gconstpointer data)
   pid_t pid;
   int status;
 
-  if (t->spawn_mutter && m->pid < 2)
+  if (t->spawn_mutter && m->pid < 2 && !(run_once || dont_run_mutter))
     g_error ("Mutter seems not to be spawned although it should be");
 
   /* I considered using g_test_trap_subprocess, but when I use it, then
@@ -251,12 +274,36 @@ cleanup (void)
 int main (int argc, char *argv[])
 {
   gint status;
+  const gchar *spawn_no;
+  struct mutter_info m = {0};
 
   g_test_init (&argc, &argv, NULL);
   environ = g_get_environ ();
 
+  spawn_no = g_environ_getenv (environ, MUTTER_TEST_SPAWN_MUTTER);
+  if (spawn_no)
+    {
+      if (g_strcmp0 (spawn_no, "once") == 0 || g_strcmp0 (spawn_no, "1") == 0)
+        {
+          run_once = 1;
+
+          spawn_mutter (&m);
+          wait_for_mutter_initialization (&m);
+        }
+      else if (g_strcmp0 (spawn_no, "none") == 0 || g_strcmp0 (spawn_no, "0") == 0)
+        {
+          /* ok, here it would be easier to suppress running mutter and set
+           * run_once = 1, but it would not be so clear, so do it explicitely */
+          dont_run_mutter = 1;
+        }
+    }
+
   add_tests ();
   status = g_test_run ();
+
+  if (run_once)
+    stop_and_check_mutter (&m);
+
   cleanup ();
 
   return status;

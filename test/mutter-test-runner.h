@@ -30,6 +30,13 @@
 /* sizeof signal == sizeof int */
 #define MUTTER_WAYLAND_READY_SIGNAL 0xa
 
+/* this environment variable affects behaviour of the test. If it's set to
+ *  "none": then tests MUTTER_TEST and MUTTER_FAIL_TEST won't spawn mutter
+ *          at all (useful when tester has mutter already running)
+ *  "once": spawn mutter only once for all testcases in test
+ */
+#define MUTTER_TEST_SPAWN_MUTTER "MUTTER_TEST_SPAWN_MUTTER"
+
 struct mutter_test {
   const char *name;
   GTestFunc func;

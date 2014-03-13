@@ -14,6 +14,7 @@ mutter_wayland_test_la_CFLAGS   =	\
 	-I$(top_srcdir)/test
 mutter_wayland_test_la_SOURCES  = 	\
 	wayland-test.c			\
+	wayland-test-implementation.c	\
 	../wayland-test-protocol.c
 mutter_wayland_test_la_LDFLAGS  =	\
 	-module	-avoid-version -no-undefined -lwayland-server

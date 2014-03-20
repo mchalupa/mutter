@@ -1,12 +1,16 @@
 
 SUBDIRS = testplugin
 
-TESTS =					\
+inst_tests =				\
 	sanity-test			\
 	plugin-test			\
 	event-test			\
 	button-test			\
 	bad-buffer-test
+
+noinst_tests =
+
+TESTS = $(noinst_tests) $(inst_tests)
 
 check_PROGRAMS = $(TESTS)
 
@@ -51,3 +55,23 @@ CLEANFILES = $(BUILT_SOURCES)
 
 xdg-shell-client-protocol.h : ../src/wayland/protocol/xdg-shell.xml
 	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+
+if ENABLE_INSTALLED_TESTS
+insttestdir = $(libexecdir)/installed-tests/$(PACKAGE)
+insttest_PROGRAMS = $(inst_tests)
+
+# use this directory for building config files
+$(shell mkdir -p '.installed-tests')
+
+# take all inst_tests and transform the name from test_foo to test_foo.test
+# which is name of config file for installed tests
+insttest_DATA = $(foreach file, $(inst_tests), .installed-tests/$(file).test)
+
+.installed-tests/%.test: % Makefile
+	$(AM_V_GEN) (echo "[Test]" > $@;\
+	echo "Exec=env MUTTER_TEST_SPAWN_MUTTER=once gtester -k --verbose $(insttestdir)/$<" >> $@; \
+	echo "Type=session-exclusive" >> $@)
+
+BUILT_SOURCES += $(insttest_DATA)
+
+endif

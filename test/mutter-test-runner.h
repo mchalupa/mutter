@@ -37,6 +37,8 @@
  */
 #define MUTTER_TEST_SPAWN_MUTTER "MUTTER_TEST_SPAWN_MUTTER"
 
+#define MUTTER_TEST_TIMEOUT "MUTTER_TEST_TIMEOUT"
+
 struct mutter_test {
   const char *name;
   GTestFunc func;

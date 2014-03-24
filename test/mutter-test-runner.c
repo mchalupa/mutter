@@ -46,6 +46,9 @@ static gint run_once = 0;
  * running already */
 static gint dont_run_mutter = 0;
 
+/* default timeout */
+static gint timeout = 10; /* seconds */
+
 static const gchar *
 find_mutter (void)
 {
@@ -171,6 +174,13 @@ wait_for_mutter_initialization (struct mutter_info *m)
 }
 
 static void
+timeout_cb (int signum)
+{
+  g_assert (signum == SIGALRM);
+  g_error ("Timeout");
+}
+
+static void
 test_setup (gpointer fixture, gconstpointer data)
 {
   struct mutter_info *m = fixture;
@@ -216,6 +226,13 @@ test_run (gpointer fixture, gconstpointer data)
 
   if (pid == 0)
     {
+      if (timeout)
+        {
+          /* ther's no main loop for using g_timeout_add_seconds */
+          signal (SIGALRM, timeout_cb);
+          alarm (timeout);
+        }
+
       t->func ();
       exit (0);
     }
@@ -275,10 +292,19 @@ int main (int argc, char *argv[])
 {
   gint status;
   const gchar *spawn_no;
+  const gchar *timeout_env;
   struct mutter_info m = {0};
 
   g_test_init (&argc, &argv, NULL);
   environ = g_get_environ ();
+
+  timeout_env = g_environ_getenv (environ, MUTTER_TEST_TIMEOUT);
+  if (timeout_env)
+    {
+      gchar *end;
+      timeout = g_ascii_strtoll (timeout_env, &end, 0);
+      g_assert (*end == '\0' && "Timeout is not a number");
+    }
 
   spawn_no = g_environ_getenv (environ, MUTTER_TEST_SPAWN_MUTTER);
   if (spawn_no)

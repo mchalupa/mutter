@@ -68,3 +68,8 @@ FAIL_TEST (abort_tst)
 {
   abort ();
 }
+
+FAIL_TEST (timeout_tst)
+{
+  sleep (15);
+}

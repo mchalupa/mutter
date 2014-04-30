@@ -103,6 +103,41 @@ move_client (struct client *client, int x, int y)
   frame_callback_wait (client, &done);
 }
 
+void
+move_pointer (struct client *client, int x, int y)
+{
+  wl_test_move_pointer (client->test->wl_test, x, y);
+
+  do
+  {
+    client_roundtrip (client);
+  } while (client->test->pointer_x != x || client->test->pointer_y != y);
+}
+
+void
+send_button (struct client *client, uint32_t button, uint32_t state)
+{
+  wl_test_send_button (client->test->wl_test, button, state);
+
+  do
+  {
+    client_roundtrip (client);
+  } while (client->input->pointer->button != button
+           || client->input->pointer->state != state);
+}
+
+void
+send_key (struct client *client, uint32_t key, uint32_t state)
+{
+  wl_test_send_key (client->test->wl_test, key, state);
+
+  do
+  {
+    client_roundtrip (client);
+  } while (client->input->keyboard->key != key
+           || client->input->keyboard->state != state);
+}
+
 static void
 xdg_shell_handle_ping (void *data, struct xdg_shell *xdg_shell, uint32_t serial)
 {

@@ -523,9 +523,6 @@ meta_display_open (void)
                                         sn_error_trap_pop);
 #endif
 
-  /* Get events */
-  meta_display_init_events (the_display);
-
   the_display->xids = g_hash_table_new (meta_unsigned_long_hash,
                                         meta_unsigned_long_equal);
   the_display->wayland_windows = g_hash_table_new (NULL, NULL);
@@ -853,6 +850,9 @@ meta_display_open (void)
   }
 
   meta_idle_monitor_init_dbus ();
+
+  /* Get events */
+  meta_display_init_events (the_display);
 
   /* Done opening new display */
   the_display->display_opening = FALSE;

@@ -624,10 +624,6 @@ meta_display_open (void)
                                         sn_error_trap_pop);
 #endif
 
-  /* Get events */
-  meta_display_init_events (display);
-  meta_display_init_events_x11 (display);
-
   display->xids = g_hash_table_new (meta_unsigned_long_hash,
                                         meta_unsigned_long_equal);
   display->stamps = g_hash_table_new (g_int64_hash,
@@ -961,6 +957,10 @@ meta_display_open (void)
   }
 
   meta_idle_monitor_init_dbus ();
+
+  /* Get events */
+  meta_display_init_events (display);
+  meta_display_init_events_x11 (display);
 
   /* Done opening new display */
   display->display_opening = FALSE;

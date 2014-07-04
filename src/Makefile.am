@@ -354,7 +354,7 @@ Meta-$(api_version).gir: libmutter.la
 	mutter-enum-types.h			\
 	$(libmutterinclude_base_headers)	\
 	$(filter %.c,$(libmutter_la_SOURCES) $(nodist_libmutter_la_SOURCES))
-@META_GIR@_SCANNERFLAGS = --warn-all --warn-error
+@META_GIR@_SCANNERFLAGS = --warn-all
 
 endif
 

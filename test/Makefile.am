@@ -6,7 +6,8 @@ inst_tests =				\
 	plugin-test			\
 	event-test			\
 	button-test			\
-	bad-buffer-test
+	bad-buffer-test			\
+	client-test
 
 noinst_tests =
 
@@ -32,6 +33,7 @@ plugin_test_SOURCES = plugin-test.c $(test_runner_src)
 event_test_SOURCES = event-test.c $(test_runner_src)
 button_test_SOURCES = button-test.c $(test_runner_src)
 bad_buffer_test_SOURCES = bad-buffer-test.c $(test_runner_src)
+client_test_SOURCES = client-test.c $(test_runner_src)
 
 
 AM_CPPFLAGS = -I$(top_builddir)/src/wayland

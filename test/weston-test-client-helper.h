@@ -75,6 +75,7 @@ struct pointer
   int y;
   uint32_t button;
   uint32_t state;
+  uint32_t button_serial;
 };
 
 struct keyboard
@@ -115,6 +116,8 @@ struct surface
   uint32_t fullscreen  : 1;
   uint32_t resizing    : 1;
   uint32_t close       : 1;
+
+  uint32_t configure_serial;
 };
 
 struct client *
@@ -128,6 +131,18 @@ surface_contains (struct surface *surface, int x, int y);
 
 void
 move_client (struct client *client, int x, int y);
+
+void
+maximize_client (struct client *client);
+
+void
+unmaximize_client (struct client *client);
+
+void
+fullscreen_client (struct client *client);
+
+void
+unfullscreen_client (struct client *client);
 
 void
 move_pointer (struct client *client, int x, int y);

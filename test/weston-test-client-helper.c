@@ -31,6 +31,7 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 #include <errno.h>
+#include <linux/input.h>
 
 #include "weston-test-client-helper.h"
 #include "xdg-shell-client-protocol.h"
@@ -85,6 +86,35 @@ frame_callback_wait_nofail(struct client *client, int *done)
   return 1;
 }
 
+static void
+resize_client (struct client *client, int width, int height)
+{
+  int done;
+  struct surface *surface = client->surface;
+
+  if (!width && !height)
+    return;
+
+  if (surface->wl_buffer)
+    wl_buffer_destroy (surface->wl_buffer);
+
+  g_assert (client->wl_shm);
+  surface->wl_buffer = create_shm_buffer (client, width, height,
+                                          &surface->data);
+
+  memset (surface->data, 0xaf, width * height * 4);
+
+  wl_surface_attach (surface->wl_surface, surface->wl_buffer, 0, 0);
+  wl_surface_damage (surface->wl_surface, 0, 0, width, height);
+
+  frame_callback_set (surface->wl_surface, &done);
+  wl_surface_commit (surface->wl_surface);
+  frame_callback_wait (client, &done);
+
+  surface->width = width;
+  surface->height = height;
+}
+
 void
 move_client (struct client *client, int x, int y)
 {
@@ -107,6 +137,71 @@ move_client (struct client *client, int x, int y)
   wl_surface_commit (surface->wl_surface);
 
   frame_callback_wait (client, &done);
+}
+
+void
+maximize_client (struct client *client)
+{
+  g_assert (client->surface->xdg_surface);
+
+  g_fprintf(stderr, "test-client: maximizing\n");
+  client->surface->maximized = 0;
+
+  xdg_surface_set_maximized (client->surface->xdg_surface);
+
+  do
+  {
+    client_roundtrip (client);
+  } while (!client->surface->maximized);
+}
+
+void
+unmaximize_client (struct client *client)
+{
+  g_assert (client->surface->xdg_surface);
+
+  g_fprintf(stderr, "test-client: unmaximizing\n");
+  client->surface->maximized = 1;
+
+  xdg_surface_unset_maximized (client->surface->xdg_surface);
+
+  do
+  {
+    client_roundtrip (client);
+  } while (client->surface->maximized);
+}
+
+void
+fullscreen_client (struct client *client)
+{
+  g_assert (client->surface->xdg_surface);
+
+  g_fprintf(stderr, "test-client: fullscreening\n");
+  client->surface->fullscreen = 0;
+
+  xdg_surface_set_fullscreen (client->surface->xdg_surface,
+                              client->output->wl_output);
+
+  do
+  {
+    client_roundtrip (client);
+  } while (!client->surface->fullscreen);
+}
+
+void
+unfullscreen_client (struct client *client)
+{
+  g_assert (client->surface->xdg_surface);
+
+  g_fprintf(stderr, "test-client: unfullscreening\n");
+  client->surface->fullscreen = 1;
+
+  xdg_surface_unset_fullscreen (client->surface->xdg_surface);
+
+  do
+  {
+    client_roundtrip (client);
+  } while (client->surface->fullscreen);
 }
 
 void
@@ -164,16 +259,17 @@ xdg_surface_handle_configure (void *data, struct xdg_surface *xdg_surface,
                               int32_t width, int32_t height,
                               struct wl_array *states, uint32_t serial)
 {
-  struct surface *s = data;
+  struct client *client = data;
+  struct surface *surface = client->surface;
   enum xdg_surface_state *st;
 
   g_fprintf (stderr, "test-client: xdg_surface.configure:\n");
   g_fprintf (stderr, "\twidth: %d, height: %d\n", width, height);
 
-  s->fullscreen = 0;
-  s->maximized = 0;
-  s->resizing = 0;
-  s->activated = 0;
+  surface->fullscreen = 0;
+  surface->maximized = 0;
+  surface->resizing = 0;
+  surface->activated = 0;
 
   wl_array_for_each(st, states)
     {
@@ -181,25 +277,29 @@ xdg_surface_handle_configure (void *data, struct xdg_surface *xdg_surface,
       {
       case XDG_SURFACE_STATE_FULLSCREEN:
         g_fprintf (stderr, "\tfullscreen\n");
-        s->fullscreen = 1;
+        surface->fullscreen = 1;
         break;
       case XDG_SURFACE_STATE_MAXIMIZED:
         g_fprintf (stderr, "\tmaximized\n");
-        s->maximized = 1;
+        surface->maximized = 1;
         break;
       case XDG_SURFACE_STATE_RESIZING:
         g_fprintf (stderr, "\tresizing\n");
-        s->resizing = 1;
+        surface->resizing = 1;
         break;
       case XDG_SURFACE_STATE_ACTIVATED:
         g_fprintf (stderr, "\tactivated\n");
-        s->activated = 1;
+        surface->activated = 1;
         break;
       default:
-        g_error ("Unkown state (%d)", *st);
+        g_error ("Unknown state (%d)", *st);
       }
   }
 
+  if (width != surface->width || height != surface->height)
+    resize_client (client, width, height);
+
+  surface->configure_serial = serial;
   xdg_surface_ack_configure (xdg_surface, serial);
 }
 static void
@@ -233,7 +333,8 @@ pointer_handle_enter (void *data, struct wl_pointer *wl_pointer,
                       uint32_t serial, struct wl_surface *wl_surface,
                       wl_fixed_t x, wl_fixed_t y)
 {
-  struct pointer *pointer = data;
+  struct client *client = data;
+  struct pointer *pointer = client->input->pointer;
 
   pointer->focus = wl_surface_get_user_data (wl_surface);
   pointer->x = wl_fixed_to_int (x);
@@ -247,7 +348,8 @@ static void
 pointer_handle_leave (void *data, struct wl_pointer *wl_pointer,
                       uint32_t serial, struct wl_surface *wl_surface)
 {
-  struct pointer *pointer = data;
+  struct client *client = data;
+  struct pointer *pointer = client->input->pointer;
 
   pointer->focus = NULL;
 
@@ -259,7 +361,8 @@ static void
 pointer_handle_motion (void *data, struct wl_pointer *wl_pointer,
                        uint32_t time, wl_fixed_t x, wl_fixed_t y)
 {
-  struct pointer *pointer = data;
+  struct client *client = data;
+  struct pointer *pointer = client->input->pointer;
 
   pointer->x = wl_fixed_to_int (x);
   pointer->y = wl_fixed_to_int (y);
@@ -273,13 +376,22 @@ pointer_handle_button (void *data, struct wl_pointer *wl_pointer,
                        uint32_t serial, uint32_t time, uint32_t button,
                        uint32_t state)
 {
-  struct pointer *pointer = data;
+  struct client *client = data;
+  struct pointer *pointer = client->input->pointer;
 
   pointer->button = button;
   pointer->state = state;
+  pointer->button_serial = serial;
 
   g_fprintf (stderr, "test-client: got pointer button %u %u\n",
              button, state);
+
+  if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED)
+    {
+        g_fprintf (stderr, "test-client: starting move %u\n", serial);
+        xdg_surface_move (client->surface->xdg_surface,
+                          client->input->wl_seat, serial);
+    }
 }
 
 static void
@@ -313,7 +425,9 @@ keyboard_handle_enter (void *data, struct wl_keyboard *wl_keyboard,
                        uint32_t serial, struct wl_surface *wl_surface,
                        struct wl_array *keys)
 {
-  struct keyboard *keyboard = data;
+
+  struct client *client = data;
+  struct keyboard *keyboard = client->input->keyboard;
 
   keyboard->focus = wl_surface_get_user_data (wl_surface);
 
@@ -325,7 +439,8 @@ static void
 keyboard_handle_leave (void *data, struct wl_keyboard *wl_keyboard,
                        uint32_t serial, struct wl_surface *wl_surface)
 {
-  struct keyboard *keyboard = data;
+  struct client *client = data;
+  struct keyboard *keyboard = client->input->keyboard;
 
   keyboard->focus = NULL;
 
@@ -338,7 +453,8 @@ keyboard_handle_key (void *data, struct wl_keyboard *wl_keyboard,
                      uint32_t serial, uint32_t time, uint32_t key,
                      uint32_t state)
 {
-  struct keyboard *keyboard = data;
+  struct client *client = data;
+  struct keyboard *keyboard = client->input->keyboard;
 
   keyboard->key = key;
   keyboard->state = state;
@@ -352,7 +468,8 @@ keyboard_handle_modifiers (void *data, struct wl_keyboard *wl_keyboard,
                            uint32_t mods_latched, uint32_t mods_locked,
                            uint32_t group)
 {
-  struct keyboard *keyboard = data;
+  struct client *client = data;
+  struct keyboard *keyboard = client->input->keyboard;
 
   keyboard->mods_depressed = mods_depressed;
   keyboard->mods_latched = mods_latched;
@@ -498,7 +615,8 @@ static void
 seat_handle_capabilities (void *data, struct wl_seat *seat,
                           enum wl_seat_capability caps)
 {
-  struct input *input = data;
+  struct client *client = data;
+  struct input *input = client->input;
   struct pointer *pointer;
   struct keyboard *keyboard;
 
@@ -508,7 +626,7 @@ seat_handle_capabilities (void *data, struct wl_seat *seat,
       pointer->wl_pointer = wl_seat_get_pointer (seat);
       wl_pointer_set_user_data (pointer->wl_pointer, pointer);
       wl_pointer_add_listener (pointer->wl_pointer, &pointer_listener,
-                               pointer);
+                               client);
       input->pointer = pointer;
     }
   else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && input->pointer)
@@ -524,7 +642,7 @@ seat_handle_capabilities (void *data, struct wl_seat *seat,
       keyboard->wl_keyboard = wl_seat_get_keyboard (seat);
       wl_keyboard_set_user_data (keyboard->wl_keyboard, keyboard);
       wl_keyboard_add_listener (keyboard->wl_keyboard, &keyboard_listener,
-                                keyboard);
+                                client);
       input->keyboard = keyboard;
     }
   else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && input->keyboard)
@@ -607,7 +725,7 @@ handle_global (void *data, struct wl_registry *registry,
       input = g_new0 (struct input, 1);
       input->wl_seat = wl_registry_bind (registry, id,
                                          &wl_seat_interface, 1);
-      wl_seat_add_listener (input->wl_seat, &seat_listener, input);
+      wl_seat_add_listener (input->wl_seat, &seat_listener, client);
       client->input = input;
     }
   else if (g_strcmp0 (interface, "wl_shm") == 0)
@@ -761,18 +879,12 @@ client_create (int x, int y, int width, int height)
   client->surface = surface;
   wl_surface_set_user_data (surface->wl_surface, surface);
 
-  surface->width = width;
-  surface->height = height;
-  surface->wl_buffer = create_shm_buffer (client, width, height,
-                                          &surface->data);
-
-  memset (surface->data, 0xaf, width * height * 4);
-
   surface->xdg_surface = xdg_shell_get_xdg_surface (client->xdg_shell,
                          surface->wl_surface);
   g_assert (surface->xdg_surface);
-  xdg_surface_add_listener (surface->xdg_surface, &xdg_surface_listener, surface);
+  xdg_surface_add_listener (surface->xdg_surface, &xdg_surface_listener, client);
 
+  resize_client (client, width, height);
   move_client(client, x, y);
 
   return client;

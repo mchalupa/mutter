@@ -26,6 +26,8 @@
 #include "config.h"
 
 #include <glib.h>
+#include <wayland-server.h>
+#include <sys/socket.h>
 
 #include "mutter-test-runner.h"
 
@@ -37,6 +39,14 @@
 #include "display-private.h"
 #include "util-private.h"
 #include "meta-plugin-manager.h"
+#include "meta-wayland.h"
+#include "meta-wayland-surface.h"
+#include "window-wayland.h"
+
+/*
+ * these tests do not run with mutter (DONT_RUN_MUTTER macro
+ * is defined in Makefile.am
+ */
 
 static void
 init_meta_display(int argc, char *argv[])
@@ -75,4 +85,27 @@ MUTTER_TEST(test1)
   };
 
   init_meta_display (argc, argv);
+
+  MetaDisplay *display = meta_get_display ();
+  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  g_assert (compositor);
+
+  struct wl_display *wl_display = wl_display_create ();
+  g_assert (wl_display);
+
+  int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+  g_assert (fd != -1);
+  struct wl_client *wl_client = wl_client_create (wl_display, fd);
+  g_assert (wl_client);
+
+  struct wl_resource *wl_resource = wl_resource_create(wl_client, &wl_surface_interface,
+                                                        1, 0);
+  g_assert (wl_resource);
+
+  MetaWaylandSurface *surface
+                = meta_wayland_surface_create (compositor, wl_client, wl_resource, 0);
+  g_assert (surface);
+
+  MetaWindow *win = meta_window_wayland_new (display, surface);
+  g_assert (win);
 }

@@ -43,7 +43,13 @@ display_test_CPPFLAGS =			\
 	-I$(top_builddir)/src		\
 	-I$(top_builddir)/src/meta	\
 	-I$(top_builddir)/src/core	\
-	-I$(top_builddir)/src/compositor
+	-I$(top_builddir)/src/compositor\
+	-I$(top_builddir)/src/ui	\
+	-I$(top_builddir)/src/backends	\
+	-I$(top_builddir)/src/wayland
+display_test_CFLAGS =			\
+	$(MUTTER_CFLAGS)		\
+	-DDONT_RUN_MUTTER
 
 
 AM_CPPFLAGS = -I$(top_builddir)/src/wayland

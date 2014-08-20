@@ -46,9 +46,16 @@ static struct
 /* each test needs environment. Get it once and keep it here */
 static gchar **env = NULL;
 
-/* set this to 1 if mutter should not run at all (tester has mutter instance
+/* when this macro is defined in the file with tests, the mutter won't
+ * be spawned */
+#ifdef DONT_RUN_MUTTER
+
+/* set this to TRUE if mutter should not run at all (tester has mutter instance
  * running already */
+static gboolean dont_run_mutter = TRUE;
+#else
 static gboolean dont_run_mutter = FALSE;
+#endif /* DONT_SPAWN_MUTTER */
 
 /* run on bare metal */
 static gboolean run_native = FALSE;

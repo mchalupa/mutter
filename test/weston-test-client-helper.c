@@ -755,6 +755,7 @@ handle_global (void *data, struct wl_registry *registry,
       client->xdg_shell = wl_registry_bind (registry, id,
                                             &xdg_shell_interface, 1);
       xdg_shell_add_listener (client->xdg_shell, &xdg_shell_listener, client);
+      xdg_shell_use_unstable_version(client->xdg_shell, 3);
     }
 
 }

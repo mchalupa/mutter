@@ -9,7 +9,8 @@ inst_tests =				\
 	bad-buffer-test			\
 	client-test
 
-noinst_tests =
+noinst_tests =				\
+	display-test
 
 TESTS = $(noinst_tests) $(inst_tests)
 
@@ -34,6 +35,15 @@ event_test_SOURCES = event-test.c $(test_runner_src)
 button_test_SOURCES = button-test.c $(test_runner_src)
 bad_buffer_test_SOURCES = bad-buffer-test.c $(test_runner_src)
 client_test_SOURCES = client-test.c $(test_runner_src)
+
+display_test_SOURCES = display-test.c $(test_runner_src)
+display_test_LDADD = ../src/.libs/libmutter.la
+display_test_LDFLAGS = -no-install
+display_test_CPPFLAGS =			\
+	-I$(top_builddir)/src		\
+	-I$(top_builddir)/src/meta	\
+	-I$(top_builddir)/src/core	\
+	-I$(top_builddir)/src/compositor
 
 
 AM_CPPFLAGS = -I$(top_builddir)/src/wayland

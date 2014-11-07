@@ -775,7 +775,8 @@ test_case_do (TestCase *test,
            strcmp (argv[0], "lower") == 0 ||
            strcmp (argv[0], "minimize") == 0 ||
            strcmp (argv[0], "unminimize") == 0 ||
-           strcmp (argv[0], "destroy") == 0)
+           strcmp (argv[0], "destroy") == 0 ||
+           strcmp (argv[0], "maximize") == 0)
     {
       if (argc != 2)
         BAD_COMMAND("usage: %s <client-id>/<window-id>", argv[0]);

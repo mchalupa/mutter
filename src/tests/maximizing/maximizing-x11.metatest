@@ -1,0 +1,22 @@
+new_client x x11
+
+create x/1
+show x/1
+wait
+
+assert_state x/1 unmaximized
+
+# maximize one client
+maximize x/1
+wait
+
+assert_state x/1 maximized
+
+# create new client that is maximized before showing
+new_client x2 x11
+create x2/1
+maximize x2/1
+show x2/1
+wait
+
+assert_state x2/1 maximized

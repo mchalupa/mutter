@@ -1,0 +1,22 @@
+new_client w wayland
+
+create w/1
+show w/1
+wait
+
+assert_state w/1 unmaximized
+
+# maximize one client
+maximize w/1
+wait
+
+assert_state w/1 maximized
+
+# create new client that is maximized before showing
+new_client w2 wayland
+create w2/1
+maximize w2/1
+show w2/1
+wait
+
+assert_state w2/1 maximized

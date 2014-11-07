@@ -703,6 +703,93 @@ test_case_check_xserver_stacking (TestCase *test,
   return *error == NULL;
 }
 
+static MetaWindow *
+test_case_get_window(TestCase *test, const char *id, GError **error)
+{
+  TestClient *client;
+  const char *window_id;
+
+  if (!test_case_parse_window_id (test, id, &client, &window_id, error))
+    return NULL;
+
+  return test_client_find_window(client, window_id, error);
+}
+
+#define ASSERTION_ERROR(...)                                              \
+  G_STMT_START {                                                          \
+      g_set_error (error,                                                 \
+                   TEST_RUNNER_ERROR, TEST_RUNNER_ERROR_ASSERTION_FAILED, \
+                   __VA_ARGS__);                                          \
+      return FALSE;                                                       \
+  } G_STMT_END
+
+static gboolean
+test_case_assert_state (TestCase *test,
+                        char    **argv,
+                        int       argc,
+                        GError  **error)
+{
+  MetaWindow *window;
+  MetaRectangle rect;
+
+  g_assert (*error == NULL);
+
+  window = test_case_get_window (test, argv[0], error);
+  if (!window)
+    BAD_COMMAND ("No window like %s\n", argv[0]);
+
+  if (strcmp (argv[1], "maximized") == 0)
+    {
+      if (meta_window_get_maximized (window) != META_MAXIMIZE_BOTH)
+          ASSERTION_ERROR ("Window %s is not maximized\n", argv[0]);
+
+      /* it must be on position 0x0 */
+      meta_window_get_frame_rect (window, &rect);
+      if (!(rect.x == 0 && rect.y == 0))
+          ASSERTION_ERROR ("Window is not on positon 0x0 (%dx%d)",
+                           rect.x, rect.y);
+    }
+  else if (strcmp (argv[1], "unmaximized") == 0)
+    {
+      /* XXX vertically/horizontally maximized? */
+      if (meta_window_get_maximized (window) == META_MAXIMIZE_BOTH)
+          ASSERTION_ERROR ("Window %s is maximized (should not be)\n", argv[0]);
+    }
+  else if (strcmp (argv[1], "hidden") == 0)
+    {
+      if (!meta_window_is_hidden (window))
+          ASSERTION_ERROR ("Window %s is not hidden", argv[0]);
+    }
+  else if (strcmp (argv[1], "fullscreened") == 0)
+    {
+      if (!meta_window_is_fullscreen (window))
+          ASSERTION_ERROR ("Window %s is not fullscreened", argv[0]);
+    }
+  else if (strcmp (argv[1], "unfullscreened") == 0)
+    {
+      if (meta_window_is_fullscreen (window))
+          ASSERTION_ERROR ("Window %s is fullscreened (should not be)", argv[0]);
+    }
+  else if (strcmp (argv[1], "focused") == 0)
+    {
+      if (!meta_window_has_focus (window))
+          ASSERTION_ERROR ("Window %s is not focused", argv[0]);
+    }
+  else if (strcmp (argv[1], "unfocused") == 0)
+    {
+      if (meta_window_has_focus (window))
+          ASSERTION_ERROR ("Window %s is focused (shouldn't be)", argv[0]);
+    }
+  else
+    {
+      g_set_error (error, TEST_RUNNER_ERROR, TEST_RUNNER_ERROR_RUNTIME_ERROR,
+                   "Unsupported state query %s\n", argv[2]);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
 static gboolean
 test_case_do (TestCase *test,
               int       argc,
@@ -819,6 +906,17 @@ test_case_do (TestCase *test,
         return FALSE;
 
       if (!test_case_check_xserver_stacking (test, error))
+        return FALSE;
+    }
+  else if (strcmp (argv[0], "assert_state") == 0)
+    {
+      if (argc < 3)
+        BAD_COMMAND("usage: %s <client-id>/<window-id> "
+                    "maximized|unmaximized|fullscreened|unfullscreened|"
+                    "hidden|focused|unfocused",
+                    argv[0]);
+
+      if (!test_case_assert_state (test, argv + 1, argc - 1, error))
         return FALSE;
     }
   else

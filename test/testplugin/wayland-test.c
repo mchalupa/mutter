@@ -34,6 +34,7 @@
 #include "meta-wayland-private.h"
 #include "meta-background-actor.h"
 #include "meta-background-group.h"
+#include "meta-backend.h"
 #include "../mutter-test-runner.h"
 
 /* === MetaWaylandPlugin declarations === */
@@ -89,6 +90,7 @@ struct _MetaWaylandTestPluginPrivate
   gint pipe_fd;
 
   ClutterActor *background_group;
+  ClutterActor *stage;
 };
 /* === END MetaWaylandPlugin declarations === */
 
@@ -165,13 +167,14 @@ meta_wayland_test_plugin_init (MetaWaylandTestPlugin *self)
   priv->info.description = "This plugin inserts wl_test object into mutter";
 
   priv->compositor = meta_wayland_compositor_get_default ();
+  priv->stage = meta_backend_get_stage (meta_get_backend ());
 
   if (wl_global_create (priv->compositor->wayland_display,
                         &wl_test_interface, 1, self, bind_test_object) == NULL)
     g_error ("Global (wl_test) initialization failed");
 
   priv->filter_id
-        = clutter_event_add_filter((ClutterStage *) priv->compositor->stage,
+        = clutter_event_add_filter((ClutterStage *) priv->stage,
                                    event_cb, NULL, self);
 
   /* get filedescriptor of pipe from parent (from the test that runs mutter)
@@ -188,10 +191,9 @@ meta_wayland_test_plugin_init (MetaWaylandTestPlugin *self)
 }
 
 static void
-set_background (ClutterActor *actor)
+set_background (MetaBackground *background, ClutterActor *background_actor)
 {
   GRand *rand = g_rand_new_with_seed (g_get_monotonic_time ());
-
   ClutterColor color;
   /* use range (0, 200) so that the color will never be white, because client
    * is white */
@@ -201,7 +203,9 @@ set_background (ClutterActor *actor)
                       g_rand_int_range (rand, 0, 200),
                       255);
 
-  clutter_actor_set_background_color (actor, &color);
+  meta_background_set_color (background, &color);
+  meta_background_actor_set_background (META_BACKGROUND_ACTOR (background_actor),
+                                        background);
 
   g_rand_free (rand);
 }
@@ -213,7 +217,8 @@ on_monitors_changed (MetaScreen *screen,
 {
   MetaWaylandTestPlugin *self = META_WAYLAND_TEST_PLUGIN (plugin);
   MetaRectangle rect;
-  ClutterActor *background;
+  MetaBackground *background;
+  ClutterActor *background_actor;
   int i, n;
 
   clutter_actor_destroy_all_children (self->priv->background_group);
@@ -223,12 +228,17 @@ on_monitors_changed (MetaScreen *screen,
     {
       meta_screen_get_monitor_geometry (screen, i, &rect);
 
-      background = meta_background_actor_new ();
-      set_background(background);
+      background_actor = meta_background_actor_new (screen, i);
 
-      clutter_actor_set_position (background, rect.x, rect.y);
-      clutter_actor_set_size (background, rect.width, rect.height);
-      clutter_actor_add_child (self->priv->background_group, background);
+      clutter_actor_set_position (background_actor, rect.x, rect.y);
+      clutter_actor_set_size (background_actor, rect.width, rect.height);
+
+      background = meta_background_new (screen);
+      set_background (background, background_actor);
+
+      g_object_unref (background);
+
+      clutter_actor_add_child (self->priv->background_group, background_actor);
     }
 }
 

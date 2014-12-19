@@ -86,6 +86,12 @@ clutter_get_device (ClutterInputDeviceType type)
   return clutter_device_manager_get_core_device (devmng, type);
 }
 
+static ClutterActor *
+get_stage (void)
+{
+	return CLUTTER_ACTOR (meta_backend_get_stage (meta_get_backend ()));
+}
+
 inline static gint64
 get_time (void)
 {
@@ -120,6 +126,7 @@ move_pointer (struct wl_client *client,
               int32_t x,
               int32_t y)
 {
+  ClutterActor *stage = get_stage ();
   MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
   ClutterInputDevice *dev = compositor->seat->pointer.device;
   g_assert (dev);
@@ -129,9 +136,9 @@ move_pointer (struct wl_client *client,
 
   clutter_event_set_time (ev, get_time ());
   clutter_event_set_coords (ev, x, y);
-  clutter_event_set_stage (ev, CLUTTER_STAGE (compositor->stage));
+  clutter_event_set_stage (ev, CLUTTER_STAGE (stage));
   ClutterActor *actor =
-            clutter_stage_get_actor_at_pos (CLUTTER_STAGE (compositor->stage),
+            clutter_stage_get_actor_at_pos (CLUTTER_STAGE (stage),
                                             CLUTTER_PICK_REACTIVE,
                                             (double) x, (double) y);
   clutter_event_set_source (ev, actor);
@@ -150,6 +157,7 @@ send_button (struct wl_client *client,
   ClutterEventType type;
   ClutterPoint pos;
   MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  ClutterActor *stage = get_stage ();
 
   ClutterInputDevice *dev = compositor->seat->pointer.device;
   g_assert (dev);
@@ -188,11 +196,11 @@ send_button (struct wl_client *client,
   ClutterEvent *ev = clutter_event_new (type);
   clutter_event_set_device (ev, clutter_get_device (CLUTTER_POINTER_DEVICE));
 
-  clutter_event_set_stage (ev, CLUTTER_STAGE (compositor->stage));
+  clutter_event_set_stage (ev, CLUTTER_STAGE (stage));
   clutter_input_device_get_coords(dev, NULL, &pos);
   clutter_event_set_coords (ev, pos.x, pos.y);
   ClutterActor *actor =
-            clutter_stage_get_actor_at_pos (CLUTTER_STAGE (compositor->stage),
+            clutter_stage_get_actor_at_pos (CLUTTER_STAGE (stage),
                                             CLUTTER_PICK_REACTIVE,
                                             pos.x, pos.y);
   clutter_event_set_source (ev, actor);
@@ -234,8 +242,7 @@ send_key (struct wl_client *client,
           uint32_t state)
 {
   ClutterEventType type;
-
-  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  ClutterActor *stage = get_stage ();
 
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED)
     {
@@ -253,7 +260,7 @@ send_key (struct wl_client *client,
   ClutterEvent *ev = clutter_event_new (type);
   clutter_event_set_device (ev, clutter_get_device (CLUTTER_KEYBOARD_DEVICE));
 
-  clutter_event_set_stage (ev, CLUTTER_STAGE (compositor->stage));
+  clutter_event_set_stage (ev, CLUTTER_STAGE (stage));
   clutter_event_set_time (ev, get_time ());
   /* XXX all the keycodes from wayland differs by 8
    * see src/wayland/meta-wayland-keyboard.c:431 */

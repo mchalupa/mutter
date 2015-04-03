@@ -58,6 +58,7 @@
 #include <sys/mman.h>
 
 #include "backends/meta-backend-private.h"
+#include "core/util-private.h"
 
 #include "meta-wayland-private.h"
 
@@ -453,8 +454,12 @@ meta_wayland_keyboard_handle_event (MetaWaylandKeyboard *keyboard,
   gboolean handled;
 
   /* Synthetic key events are for autorepeat. Ignore those, as
-   * autorepeat in Wayland is done on the client side. */
-  if (event->flags & CLUTTER_EVENT_FLAG_SYNTHETIC)
+   * autorepeat in Wayland is done on the client side.
+   * If mutter is in testing mode, we need the synthetic events
+   * pass though, since every event in testing mode is synthetic.
+   * Tests won't send autorepeat events, so we're fine here */
+  if ((event->flags & CLUTTER_EVENT_FLAG_SYNTHETIC)
+      && !meta_is_testing())
     return FALSE;
 
   meta_verbose ("Handling key %s event code %d\n",

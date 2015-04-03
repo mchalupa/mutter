@@ -5,6 +5,8 @@ lib_LTLIBRARIES = libmutter.la
 
 SUBDIRS=compositor/plugins
 
+BUILT_SOURCES=
+CLEANFILES=
 EXTRA_DIST =
 NULL =
 
@@ -395,7 +397,7 @@ endif
 
 dbus_idle_built_sources = meta-dbus-idle-monitor.c meta-dbus-idle-monitor.h
 
-CLEANFILES =					\
+CLEANFILES +=					\
 	$(mutter_built_sources)			\
 	$(typelib_DATA)				\
 	$(gir_DATA)
@@ -416,7 +418,7 @@ EXTRA_DIST +=					\
 	org.gnome.Mutter.IdleMonitor.xml	\
 	$(NULL)
 
-BUILT_SOURCES =					\
+BUILT_SOURCES +=				\
 	$(mutter_built_sources)			\
 	$(libmutterinclude_built_headers)
 

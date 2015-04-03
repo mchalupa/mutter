@@ -2,6 +2,25 @@
 
 if HAVE_WAYLAND
 
+wfits_built_sources =						\
+	tests/wfits/protocol/wayland-fits-protocol.c		\
+	tests/wfits/protocol/wayland-fits-server-protocol.h
+
+noinst_PROGRAMS += wfits-runner
+
+wfits_runner_SOURCES =			\
+	tests/wfits/wfits-runner.c	\
+	$(wfits_built_sources)
+wfits_runner_LDADD = $(MUTTER_LIBS) libmutter.la
+
+tests/wfits/protocol/wayland-fits-protocol.c: tests/wfits/protocol/wayland-fits.xml
+	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
+tests/wfits/protocol/wayland-fits-server-protocol.h: tests/wfits/protocol/wayland-fits.xml
+	$(AM_V_GEN)$(WAYLAND_SCANNER) server-header < $< > $@
+
+BUILT_SOURCES += $(wfits_built_sources)
+CLEANFILES += $(wfits_built_sources)
+
 if BUILDOPT_INSTALL_TESTS
 stackingdir = $(pkgdatadir)/tests/stacking
 dist_stacking_DATA =				\

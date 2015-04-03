@@ -264,15 +264,20 @@ event_from_supported_hardware_device (MetaWaylandSeat    *seat,
 
   input_mode = clutter_input_device_get_device_mode (input_device);
 
-  if (input_mode != CLUTTER_INPUT_MODE_SLAVE)
+  if (meta_is_testing ())
     {
-      if (meta_is_testing ())
-        /* in testing mode the test events are from master
-         * device, so that means we're okay here. We don't want to allow
-         * all events, so that we can use input devices during testing. */
-        return TRUE;
+      /* in testing mode we want only events from tests to
+       * be handled */
+      if (event->any.flags & CLUTTER_EVENT_FLAG_SYNTHETIC)
+	return TRUE;
       else
-        /* do not allow such events in real life */
+        return FALSE;
+    }
+  else
+    {
+      /* in normal (non-testing) mode we accept events only
+       * from physical devices */
+      if (input_mode != CLUTTER_INPUT_MODE_SLAVE)
         goto out;
     }
 

@@ -21,6 +21,8 @@
 
 #include "config.h"
 
+#include <core/util-private.h>
+
 #include "meta-wayland-seat.h"
 
 #include "meta-wayland-private.h"
@@ -263,7 +265,16 @@ event_from_supported_hardware_device (MetaWaylandSeat    *seat,
   input_mode = clutter_input_device_get_device_mode (input_device);
 
   if (input_mode != CLUTTER_INPUT_MODE_SLAVE)
-    goto out;
+    {
+      if (meta_is_testing ())
+        /* in testing mode the test events are from master
+         * device, so that means we're okay here. We don't want to allow
+         * all events, so that we can use input devices during testing. */
+        return TRUE;
+      else
+        /* do not allow such events in real life */
+        goto out;
+    }
 
   hardware_device = TRUE;
 

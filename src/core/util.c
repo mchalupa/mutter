@@ -42,6 +42,21 @@
 #include <X11/Xlib.h>   /* must explicitly be included for Solaris; #326746 */
 #include <X11/Xutil.h>  /* Just for the definition of the various gravities */
 
+gboolean meta_testing_mode = FALSE;
+
+void
+meta_set_testing (void)
+{
+  g_warning ("Setting mutter to testing mode");
+  meta_testing_mode = TRUE;
+}
+
+inline gboolean
+meta_is_testing (void)
+{
+  return meta_testing_mode;
+}
+
 #ifdef WITH_VERBOSE_MODE
 static void
 meta_topic_real_valist (MetaDebugTopic topic,

@@ -33,5 +33,7 @@ void     meta_set_debugging (gboolean setting);
 void     meta_set_syncing (gboolean setting);
 void     meta_set_replace_current_wm (gboolean setting);
 void     meta_set_is_wayland_compositor (gboolean setting);
+void     meta_set_testing (void);
+gboolean meta_is_testing (void);
 
 #endif

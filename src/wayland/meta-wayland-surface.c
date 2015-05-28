@@ -1392,6 +1392,11 @@ static void
 wl_shell_surface_set_state (MetaWaylandSurface *surface,
                             SurfaceState        state)
 {
+  g_return_if_fail (surface);
+
+  if (!surface->window)
+    return;
+
   if (state == SURFACE_STATE_FULLSCREEN)
     meta_window_make_fullscreen (surface->window);
   else

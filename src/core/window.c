@@ -1248,15 +1248,8 @@ meta_window_unmanage (MetaWindow  *window,
 
   meta_verbose ("Unmanaging %s\n", window->desc);
 
-#ifdef HAVE_WAYLAND
-  /* This needs to happen for both Wayland and XWayland clients,
-   * so it can't be in MetaWindowWayland. */
-  if (window->surface)
-    {
-      meta_wayland_surface_set_window (window->surface, NULL);
-      window->surface = NULL;
-    }
-#endif
+  if (window->maximized_horizontally || window->maximized_vertically)
+    unmaximize_window_before_freeing (window);
 
   if (window->visible_to_compositor)
     {
@@ -1275,6 +1268,16 @@ meta_window_unmanage (MetaWindow  *window,
   meta_display_unregister_stamp (window->display, window->stamp);
 
   window->unmanaging = TRUE;
+
+#ifdef HAVE_WAYLAND
+  /* This needs to happen for both Wayland and XWayland clients,
+   * so it can't be in MetaWindowWayland. */
+  if (window->surface)
+    {
+      meta_wayland_surface_set_window (window->surface, NULL);
+      window->surface = NULL;
+    }
+#endif
 
   if (meta_prefs_get_attach_modal_dialogs ())
     {
@@ -1363,9 +1366,6 @@ meta_window_unmanage (MetaWindow  *window,
     meta_display_end_grab_op (window->display, timestamp);
 
   g_assert (window->display->grab_window != window);
-
-  if (window->maximized_horizontally || window->maximized_vertically)
-    unmaximize_window_before_freeing (window);
 
   meta_window_unqueue (window, META_QUEUE_CALC_SHOWING |
                                META_QUEUE_MOVE_RESIZE |

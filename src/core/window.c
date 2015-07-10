@@ -1567,8 +1567,9 @@ implement_showing (MetaWindow *window,
        * windows we might want to know where they are on the screen,
        * so we should place the window even if we're hiding it rather
        * than showing it.
+       * Force placing windows only when they are already mapped, see #751887
        */
-      if (!window->placed)
+      if (!window->placed && window->mapped)
         meta_window_force_placement (window);
 
       meta_window_hide (window);
